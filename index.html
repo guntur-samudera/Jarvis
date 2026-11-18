@@ -1,0 +1,321 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Jarvis</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<meta name="theme-color" content="#071426"><meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Jarvis">
+<meta name="robots" content="noindex">
+<style>
+:root{--bg:#071426;--panel:#0d2038;--line:#1c3a5e;--ink:#e8f1fb;--mu:#8fa9c7;--blue:#2f9bff;--blue2:#7cc4ff;--ok:#3ddc97;--bad:#ff6b6b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink)}
+body{font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;
+ padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+header h1{font-size:19px;letter-spacing:.22em;margin:0;font-weight:700;color:var(--blue2)}
+#st{margin-left:auto;font-size:12.5px;color:var(--mu);display:flex;align-items:center;gap:6px;text-align:right}
+.dot{width:9px;height:9px;border-radius:50%;background:#55667a;flex:none}.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.ib{background:none;border:1px solid var(--line);color:var(--mu);border-radius:10px;min-width:44px;height:44px;font-size:18px}
+#log{flex:1;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:10px}
+.b{max-width:88%;padding:10px 13px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.b.u{align-self:flex-end;background:#16406f;border-bottom-right-radius:4px}
+.b.j{align-self:flex-start;background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:4px}
+.b.s{align-self:center;background:none;color:var(--mu);font-size:13px;text-align:center;padding:2px 8px}
+.b a.go{display:inline-block;margin-top:8px;background:var(--blue);color:#04121f;font-weight:700;text-decoration:none;
+ padding:9px 14px;border-radius:10px}
+#chips{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 8px;scrollbar-width:none}#chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:9px 14px;font-size:14px}
+#bar{display:flex;gap:8px;align-items:center;padding:8px 12px 12px;border-top:1px solid var(--line)}
+#in{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);color:var(--ink);border-radius:12px;
+ padding:12px 13px;font:inherit}
+#in:focus{outline:2px solid var(--blue);outline-offset:1px}
+#mic{flex:none;width:58px;height:58px;border-radius:50%;border:0;background:var(--blue);color:#04121f;font-size:24px;
+ box-shadow:0 0 0 0 rgba(47,155,255,.6)}
+#mic.on{background:var(--bad);animation:p 1.2s infinite}
+@keyframes p{0%{box-shadow:0 0 0 0 rgba(255,107,107,.55)}70%{box-shadow:0 0 0 18px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}
+@media (prefers-reduced-motion:reduce){#mic.on{animation:none}}
+#send{flex:none;height:48px;padding:0 16px;border-radius:12px;border:0;background:#1b4f86;color:var(--ink);font:inherit;font-weight:600}
+.sheet{position:fixed;inset:0;background:rgba(3,9,18,.86);display:none;align-items:flex-end;justify-content:center;z-index:5}
+.sheet.show{display:flex}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;width:100%;max-width:560px;
+ max-height:92vh;overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+.card h2{margin:0 0 6px;font-size:18px}.card p{color:var(--mu);margin:6px 0 12px;font-size:14.5px}
+label{display:block;font-size:13.5px;color:var(--mu);margin:12px 0 4px}
+.card input,.card textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:10px;
+ padding:11px 12px;font:inherit}
+.card textarea{min-height:120px;font-size:14px}
+.row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{flex:1;min-height:48px;border-radius:12px;border:0;background:var(--blue);color:#04121f;font:inherit;font-weight:700;padding:0 14px}
+.btn.g{background:none;border:1px solid var(--line);color:var(--ink);font-weight:500}
+.sw{display:flex;align-items:center;gap:10px;margin-top:14px}.sw input{width:22px;height:22px;flex:none}
+#err{color:var(--bad);font-size:14px;margin-top:10px;min-height:1.2em}
+small.v{display:block;color:var(--mu);text-align:center;margin-top:14px;font-size:12px}
+</style></head><body>
+
+<header>
+  <h1>JARVIS</h1>
+  <div id="st"><span class="dot" id="dot"></span><span id="stt">belum tersambung</span></div>
+  <button class="ib" id="bset" aria-label="Pengaturan">&#9881;</button>
+</header>
+
+<div id="log" aria-live="polite"></div>
+
+<div id="chips">
+  <button class="chip" data-q="bacakan berita">Berita</button>
+  <button class="chip" data-q="bacakan catatan">Catatan</button>
+  <button class="chip" data-q="buka sigap">SIGAP</button>
+  <button class="chip" data-q="mulai kerja di laptop">Mulai kerja di laptop</button>
+  <button class="chip" data-q="status laptop">Status laptop</button>
+  <button class="chip" data-q="bantuan">Bantuan</button>
+</div>
+
+<div id="bar">
+  <button id="mic" aria-label="Bicara">&#127908;</button>
+  <input id="in" type="text" autocomplete="off" enterkeyhint="send" placeholder="Ketik atau ucapkan perintah">
+  <button id="send">Kirim</button>
+</div>
+
+<div class="sheet" id="sheet"><div class="card">
+  <h2>Pengaturan Jarvis</h2>
+  <p>Alamat dan sandi jembatan didapat saat memasang Kode.gs di Google Apps Script. Keduanya hanya disimpan di perangkat ini.</p>
+  <label for="falamat">Alamat jembatan (berakhiran /exec)</label>
+  <input id="falamat" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/.../exec">
+  <label for="fsandi">Sandi jembatan</label>
+  <input id="fsandi" type="password" autocomplete="off">
+  <label for="fnama">Nama perangkat ini</label>
+  <input id="fnama" type="text" autocomplete="off" placeholder="MatePad atau HP">
+  <label for="fpintas">Pintasan sendiri (satu per baris: nama = alamat)</label>
+  <textarea id="fpintas" spellcheck="false" placeholder="absen = https://contoh.go.id/absen"></textarea>
+  <div class="sw"><input id="fsuara" type="checkbox"><label for="fsuara" style="margin:0">Jarvis menjawab dengan suara</label></div>
+  <div id="err"></div>
+  <div class="row"><button class="btn g" id="btutup">Tutup</button><button class="btn" id="bsimpan">Simpan dan sambungkan</button></div>
+  <div class="row"><button class="btn g" id="bpasang" style="display:none">Pasang sebagai aplikasi</button></div>
+  <small class="v">Jarvis web versi 1.0</small>
+</div></div>
+
+<script>
+'use strict';
+var VERSI='1.0';
+var SIGAP='https://script.google.com/macros/s/AKfycbziGjjLwdvSXM4U7NI6iQ6Kx9vbvgJU74fIaYAP75UEMWTxReuz-xBDhcPmj1TIvWie/exec';
+var TAUTAN={
+  'sigap':SIGAP,'youtube':'https://www.youtube.com','gmail':'https://mail.google.com','email':'https://mail.google.com',
+  'google drive':'https://drive.google.com','drive':'https://drive.google.com','google':'https://www.google.com',
+  'kalender':'https://calendar.google.com','peta':'https://maps.google.com','maps':'https://maps.google.com',
+  'whatsapp':'whatsapp://send','wa':'whatsapp://send','claude':'https://claude.ai',
+  'gudep umar':'https://guntur-samudera.github.io/gudep-umar/','gudep':'https://guntur-samudera.github.io/gudep-umar/',
+  'berita':'https://news.google.com/?hl=id&gl=ID&ceid=ID:id'
+};
+var BANTUAN='Saya bisa membuka SIGAP, YouTube, Gmail, Drive, WhatsApp, dan pintasan Anda; mencari di Google dan YouTube; '+
+  'mencarikan referensi; membacakan berita; menyimpan dan membacakan catatan; menyebut jam dan tanggal; serta meneruskan '+
+  'perintah ke laptop bila Anda menambahkan kata di laptop, misalnya buka SIGAP di laptop. Kalimat lain saya jawab sebagai obrolan.';
+
+/* ---------- penyimpanan di perangkat ---------- */
+function ambil(k,d){try{var v=localStorage.getItem('jarvis_'+k);return v===null?d:v}catch(e){return d}}
+function simpan(k,v){try{localStorage.setItem('jarvis_'+k,v)}catch(e){}}
+var cfg={alamat:ambil('alamat',''),sandi:ambil('sandi',''),nama:ambil('nama',''),suara:ambil('suara','1')==='1',pintas:ambil('pintas','')};
+var panggilan=ambil('panggilan','Blue');
+var riwayat=[];
+
+/* ---------- tampilan ---------- */
+var $=function(i){return document.getElementById(i)};
+function gelembung(teks,jenis,tautan){
+  var d=document.createElement('div');d.className='b '+jenis;d.textContent=teks;
+  [].concat(tautan||[]).forEach(function(t,i){var a=document.createElement('a');a.className='go';a.href=t.url;a.target='_blank';
+    a.rel='noopener';a.textContent=t.label||'Buka';if(i===0)d.appendChild(document.createElement('br'));else a.style.marginLeft='8px';
+    d.appendChild(a)});
+  $('log').appendChild(d);$('log').scrollTop=$('log').scrollHeight;return d}
+function ucap(teks){
+  if(!cfg.suara||!('speechSynthesis' in window))return;
+  try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(teks);u.lang='id-ID';
+    var s=speechSynthesis.getVoices().filter(function(v){return /^id/i.test(v.lang)})[0];if(s)u.voice=s;
+    u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+function jawab(teks,tautan){gelembung(teks,'j',tautan);ucap(teks)}
+function status(menyala,teks){$('dot').className='dot'+(menyala?' on':'');$('stt').textContent=teks}
+
+/* ---------- jembatan (Apps Script) ---------- */
+function api(aksi,data,batas){
+  if(!cfg.alamat||!cfg.sandi)return Promise.reject(new Error('belum-diatur'));
+  var o=Object.assign({sandi:cfg.sandi,aksi:aksi},data||{});
+  var ctl=('AbortController' in window)?new AbortController():null;
+  var t=setTimeout(function(){if(ctl)ctl.abort()},batas||30000);
+  return fetch(cfg.alamat,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(o),
+    signal:ctl?ctl.signal:undefined})
+    .then(function(r){return r.json()})
+    .then(function(j){clearTimeout(t);if(!j.ok)throw new Error(j.galat||'gagal');return j},
+          function(e){clearTimeout(t);throw e})}
+function pesanGalat(e){
+  var m=String(e&&e.message||e);
+  if(m==='belum-diatur')return 'Jembatan belum diatur. Ketuk tombol roda gigi untuk mengisi alamat dan sandinya.';
+  if(m==='sandi')return 'Sandi jembatan ditolak. Periksa sandi di Pengaturan.';
+  if(m==='sandi-belum-diatur')return 'Sandi di Kode.gs belum diganti. Ganti dulu, lalu terapkan ulang.';
+  if(/abort/i.test(m))return 'Jembatan terlalu lama menjawab. Coba lagi sebentar lagi.';
+  if(/Failed to fetch|NetworkError|load failed/i.test(m))return 'Tidak bisa menghubungi jembatan. Periksa internet dan alamatnya.';
+  return 'Ada kendala: '+m}
+function periksa(){
+  if(!cfg.alamat||!cfg.sandi){status(false,'belum tersambung');return Promise.resolve(null)}
+  return api('halo',{},15000).then(function(j){
+    if(j.panggilan){panggilan=j.panggilan;simpan('panggilan',panggilan)}
+    var l=j.laptop||{};status(true,'tersambung · laptop '+(l.menyala?'menyala':'tidak terlihat'));return j},
+    function(e){status(false,'tidak tersambung');throw e})}
+
+/* ---------- memahami perintah ---------- */
+function pintasan(){
+  var t={};Object.keys(TAUTAN).forEach(function(k){t[k]=TAUTAN[k]});
+  cfg.pintas.split(/\n/).forEach(function(b){var i=b.indexOf('=');if(i>0){var n=b.slice(0,i).trim().toLowerCase(),u=b.slice(i+1).trim();
+    if(n&&u)t[n]=/^[a-z][a-z0-9+.\-]*:/i.test(u)?u:'https://'+u}});
+  return t}
+function bersih(teks){
+  var a=String(teks||'').replace(/\s+/g,' ').replace(/^[\s,.:!?]+|[\s,.:!?]+$/g,'');
+  a=a.replace(/^(ok(e)?|halo|hai)?\s*jarvis[\s,.:]*/i,'');
+  var lama;do{lama=a;a=a.replace(/^(tolong|coba|mohon|bisa|bisakah|kamu|anda|dong|ya|oke|ok|baik|silakan|bantu|bantuan|bantuin|minta|saya mau|saya ingin|saya|aku)\s+(?=\S)/i,'')}while(a!==lama);
+  a=a.replace(/^(bukain|bukak|open|membuka|bukakan|bukalah)\b/i,'buka').replace(/^(carikan|search|googling|mencari)\b/i,'cari')
+     .replace(/^cari\s+saya\s+/i,'cari ').replace(/^(bacain|membacakan|baca)\b/i,'bacakan');
+  return a}
+function pahami(teks){
+  var utuh=String(teks||'').trim(), a=bersih(teks), p=a.toLowerCase(), m;
+  if(!p)return {aksi:'kosong'};
+  if(p==='bantuan'||/apa yang bisa|bisa apa/.test(p))return {aksi:'bantuan'};
+  if(/^(status|cek|periksa)\s+laptop$/.test(p)||/^(apakah\s+)?laptop\s+(menyala|hidup|nyala|aktif)/.test(p))return {aksi:'status'};
+  if((m=/^(?:di\s+)?laptop[\s,:]+(.+)$/i.exec(a)))return {aksi:'laptop',teks:m[1].trim()};
+  if((m=/^(.+?)\s+(?:di|pada|ke|lewat)\s+laptop$/i.exec(a)))return {aksi:'laptop',teks:m[1].trim()};
+  if(/^bacakan\s+(isi\s+)?catatan(\s+(saya|terakhir|tadi|jarvis))*$/.test(p)||/^(lihat|apa saja)\s+catatan/.test(p))return {aksi:'baca_catatan'};
+  if((m=/^(?:catat(?:kan|lah)?|catatan|ingat(?:kan)?|tulis(?:kan)?)\b[\s:,]*(.*)$/i.exec(a)))
+    return {aksi:'catat',isi:m[1].replace(/^(bahwa|ini|dong|ya)\s+/i,'').trim()};
+  if((m=/^(?:bacakan\s+)?(?:berita|kabar)\b\s*(.*)$/i.exec(a)))
+    return {aksi:'berita',topik:m[1].replace(/^(hari ini|terbaru|terkini)?\s*(tentang|soal|mengenai)?\s*/i,'').trim()};
+  if((m=/^cari\s+(?:referensi|rujukan|sumber|literatur|jurnal)\s+(?:tentang\s+|mengenai\s+|soal\s+|untuk\s+)?(.+)$/i.exec(a)))
+    return {aksi:'referensi',topik:m[1].trim()};
+  if((m=/^(?:cari|putar(?:kan)?|buka)\s+(.+?)\s+di\s+youtube$/i.exec(a))||(m=/^(?:cari|putar(?:kan)?)\s+(?:video|lagu)\s+(.+)$/i.exec(a)))
+    return {aksi:'youtube',kata:m[1].trim()};
+  if((m=/^cari\s+(.+)$/i.exec(a)))return {aksi:'cari',kata:m[1].trim()};
+  if((m=/^buka\s+(?:aplikasi\s+|situs\s+|website\s+|web\s+|menu\s+)?(.+)$/i.exec(a)))return {aksi:'buka',nama:m[1].replace(/\s+(dong|ya|sekarang|saja)$/i,'').trim()};
+  if(/^(mulai|ayo|mari)\s+(be)?kerja$/.test(p))return {aksi:'buka',nama:'sigap'};
+  if(/\b(jam berapa|pukul berapa|jam sekarang)\b/.test(p)||p==='jam')return {aksi:'jam'};
+  if(/\b(tanggal berapa|hari apa|tanggal hari ini)\b/.test(p)||p==='tanggal'||p==='hari ini')return {aksi:'tanggal'};
+  return {aksi:'tanya',teks:utuh.replace(/^(ok(e)?\s+)?jarvis[\s,.:]*/i,'')||utuh}}
+
+/* ---------- menjalankan ---------- */
+function bukaTautan(url,nama){
+  var w=null;try{w=window.open(url,'_blank')}catch(e){}
+  jawab((w?'Membuka ':'Ketuk tombol di bawah untuk membuka ')+nama+', '+panggilan+'.',{url:url,label:'Buka '+nama})}
+function jalankan(p){
+  var t=pintasan(), d=new Date(), k;
+  switch(p.aksi){
+  case 'kosong':return Promise.resolve();
+  case 'bantuan':jawab(BANTUAN);return Promise.resolve();
+  case 'jam':jawab('Sekarang pukul '+('0'+d.getHours()).slice(-2)+'.'+('0'+d.getMinutes()).slice(-2)+', '+panggilan+'.');return Promise.resolve();
+  case 'tanggal':jawab('Hari ini '+d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'.');return Promise.resolve();
+  case 'cari':bukaTautan('https://www.google.com/search?q='+encodeURIComponent(p.kata),'pencarian '+p.kata);return Promise.resolve();
+  case 'youtube':bukaTautan('https://www.youtube.com/results?search_query='+encodeURIComponent(p.kata),'YouTube '+p.kata);return Promise.resolve();
+  case 'buka':
+    k=p.nama.toLowerCase();
+    if(!t[k]){var calon=Object.keys(t).filter(function(n){return n.length>2&&(k.indexOf(n)>=0||n.indexOf(k)>=0)});if(calon.length)k=calon.sort(function(x,y){return y.length-x.length})[0]}
+    if(t[k]){bukaTautan(t[k],k);return Promise.resolve()}
+    if(/^[a-z0-9\-]+(\.[a-z0-9\-]+)+(\/\S*)?$/i.test(p.nama.replace(/\s+/g,''))){bukaTautan('https://'+p.nama.replace(/\s+/g,''),p.nama);return Promise.resolve()}
+    jawab('Saya belum mengenal '+p.nama+' di perangkat ini, '+panggilan+'. Tambahkan sebagai pintasan di Pengaturan, atau katakan buka '+p.nama+' di laptop.');
+    return Promise.resolve();
+  case 'referensi':
+    gelembung('Mencari rujukan…','s');
+    return fetch('https://id.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=1&srsearch='+encodeURIComponent(p.topik))
+      .then(function(r){return r.json()}).then(function(j){var s=(j.query&&j.query.search||[])[0];if(!s)return null;
+        return fetch('https://id.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(s.title.replace(/ /g,'_'))).then(function(r){return r.json()})
+          .then(function(h){return h&&h.extract?{judul:s.title,isi:h.extract}:null})})
+      .catch(function(){return null}).then(function(w){
+        var teks='Ini rujukan untuk '+p.topik+', '+panggilan+'.';
+        if(w)teks+=' Menurut Wikipedia tentang '+w.judul+': '+w.isi.split(/(?<=[.!?])\s+/).slice(0,3).join(' ');
+        jawab(teks,[{url:'https://scholar.google.com/scholar?hl=id&q='+encodeURIComponent(p.topik),label:'Google Cendekia'},
+                    {url:'https://www.google.com/search?q='+encodeURIComponent(p.topik),label:'Google'}])});
+  case 'catat':
+    if(!p.isi){jawab('Apa yang perlu dicatat, '+panggilan+'? Katakan catat, lalu isinya.');return Promise.resolve()}
+    return api('catat',{isi:p.isi,dari:cfg.nama||'web'}).then(function(){jawab('Tercatat, '+panggilan+'.')});
+  case 'baca_catatan':
+    return api('catatan',{jumlah:5}).then(function(j){var c=j.catatan||[];
+      if(!c.length){jawab('Belum ada catatan, '+panggilan+'.');return}
+      jawab(c.length+' catatan terakhir, '+panggilan+'.\n'+c.map(function(b){return '• '+b.replace(/^\[(\d+-\d+)-\d+ ([\d.]+)\]\s*/,'$1 $2  ')}).join('\n'))});
+  case 'berita':
+    gelembung('Mengambil berita…','s');
+    return api('berita',{topik:p.topik}).then(function(j){var n=['Pertama','Kedua','Ketiga','Keempat','Kelima'],b=j.judul||[];
+      if(!b.length){jawab('Saya tidak menemukan berita untuk itu, '+panggilan+'.');return}
+      jawab((p.topik?'Berita tentang '+p.topik:'Berita utama saat ini')+', '+panggilan+'.\n'+b.map(function(x,i){
+        var s=x.lastIndexOf(' - ');return n[i]+', '+(s>0?x.slice(0,s)+', dari '+x.slice(s+3):x)+'.'}).join('\n'))});
+  case 'status':
+    return periksa().then(function(j){var l=j&&j.laptop||{};
+      jawab(l.menyala?'Laptop menyala dan Jarvis di sana siaga, '+panggilan+'.':
+        (l.detikLalu==null?'Laptop belum pernah terlihat tersambung, '+panggilan+'.':
+         'Laptop tidak terlihat sejak '+Math.round(l.detikLalu/60)+' menit lalu, '+panggilan+'.'))});
+  case 'laptop':
+    return api('suruh',{teks:p.teks,dari:cfg.nama||'web'}).then(function(j){
+      var l=j.laptop||{};
+      if(!l.menyala){jawab('Perintah saya titipkan, '+panggilan+', tetapi laptop sedang tidak terlihat. Perintah dijalankan bila laptop menyala dalam sepuluh menit.');return}
+      gelembung('Diteruskan ke laptop…','s');
+      return tunggu(j.id,0)});
+  case 'tanya':
+    riwayat.push({role:'user',content:p.teks});riwayat=riwayat.slice(-12);
+    gelembung('Berpikir…','s');
+    return api('tanya',{pesan:riwayat},45000).then(function(j){
+      if(j.tanpaKunci){riwayat.pop();jawab('Itu belum saya pahami sebagai perintah, '+panggilan+', dan otak AI belum dipasang di jembatan. Katakan bantuan untuk daftar kemampuan.');return}
+      var t=j.jawaban||'Maaf, saya tidak mendapat jawaban.';riwayat.push({role:'assistant',content:t});jawab(t)},
+      function(e){riwayat.pop();throw e});
+  }
+  return Promise.resolve()}
+function tunggu(id,n){
+  return new Promise(function(r){setTimeout(r,n<3?2500:4000)}).then(function(){return api('hasil',{id:id},15000)}).then(function(j){
+    if(j.selesai){jawab('Laptop: '+j.hasil);return}
+    if(n>=8){jawab('Laptop belum melapor, '+panggilan+'. Perintah tetap dititipkan sampai sepuluh menit.');return}
+    return tunggu(id,n+1)})}
+var sibuk=false;
+function proses(teks){
+  teks=String(teks||'').trim();if(!teks||sibuk)return;
+  sibuk=true;gelembung(teks,'u');
+  var p;try{p=pahami(teks)}catch(e){p={aksi:'tanya',teks:teks}}
+  jalankan(p).catch(function(e){jawab(pesanGalat(e))}).then(function(){sibuk=false})}
+
+/* ---------- mikrofon ---------- */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, dengar=false;
+function petunjukMik(){gelembung('Mikrofon aplikasi tidak tersedia di perangkat ini. Ketuk kolom ketik, lalu pakai tombol mikrofon pada keyboard.','s');$('in').focus()}
+function mik(){
+  if(!SR){petunjukMik();return}
+  if(dengar){try{rec.stop()}catch(e){}return}
+  try{speechSynthesis.cancel()}catch(e){}
+  rec=new SR();rec.lang='id-ID';rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onstart=function(){dengar=true;$('mic').className='on'};
+  rec.onend=function(){dengar=false;$('mic').className=''};
+  rec.onerror=function(e){dengar=false;$('mic').className='';
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='language-not-supported'||e.error==='network'){SR=null;petunjukMik()}};
+  rec.onresult=function(e){var t=e.results[0][0].transcript;proses(t)};
+  try{rec.start()}catch(e){petunjukMik()}}
+
+/* ---------- pengaturan ---------- */
+function bukaAtur(){
+  $('falamat').value=cfg.alamat;$('fsandi').value=cfg.sandi;$('fnama').value=cfg.nama;$('fpintas').value=cfg.pintas;
+  $('fsuara').checked=cfg.suara;$('err').textContent='';$('sheet').className='sheet show'}
+function simpanAtur(){
+  cfg.alamat=$('falamat').value.trim();cfg.sandi=$('fsandi').value;cfg.nama=$('fnama').value.trim();
+  cfg.pintas=$('fpintas').value;cfg.suara=$('fsuara').checked;
+  simpan('alamat',cfg.alamat);simpan('sandi',cfg.sandi);simpan('nama',cfg.nama);simpan('pintas',cfg.pintas);simpan('suara',cfg.suara?'1':'0');
+  if(!cfg.alamat||!cfg.sandi){$('sheet').className='sheet';status(false,'belum tersambung');return}
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w\-]+\/exec$/.test(cfg.alamat)){$('err').textContent='Alamat harus alamat Apps Script yang berakhiran /exec.';return}
+  $('err').textContent='Menyambungkan…';
+  periksa().then(function(){$('sheet').className='sheet';gelembung('Tersambung ke jembatan.','s')},function(e){$('err').textContent=pesanGalat(e)})}
+
+/* ---------- mulai ---------- */
+if(typeof document!=='undefined'&&document.getElementById){
+  $('mic').onclick=mik;
+  $('send').onclick=function(){var v=$('in').value;$('in').value='';proses(v)};
+  $('in').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();$('send').onclick()}});
+  $('bset').onclick=bukaAtur;$('btutup').onclick=function(){$('sheet').className='sheet'};$('bsimpan').onclick=simpanAtur;
+  [].forEach.call(document.querySelectorAll('.chip'),function(c){c.onclick=function(){proses(c.getAttribute('data-q'))}});
+  var DP=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();DP=e;$('bpasang').style.display=''});
+  $('bpasang').onclick=function(){if(DP){DP.prompt();DP=null;$('bpasang').style.display='none'}};
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
+  if('speechSynthesis' in window)try{speechSynthesis.getVoices()}catch(e){}
+  gelembung('Jarvis siap. Ketuk mikrofon atau ketik perintah. Tambahkan kata "di laptop" untuk menyuruh laptop.','s');
+  if(cfg.alamat&&cfg.sandi)periksa().catch(function(){});else bukaAtur();
+  setInterval(function(){if(cfg.alamat&&cfg.sandi&&document.visibilityState==='visible')periksa().catch(function(){})},60000);
+}
+if(typeof module!=='undefined')module.exports={pahami:pahami,bersih:bersih};
+</script>
+</body></html>
