@@ -90,15 +90,19 @@ small.v{display:block;color:var(--mu);text-align:center;margin-top:14px;font-siz
   <label for="fpintas">Pintasan sendiri (satu per baris: nama = alamat)</label>
   <textarea id="fpintas" spellcheck="false" placeholder="absen = https://contoh.go.id/absen"></textarea>
   <div class="sw"><input id="fsuara" type="checkbox"><label for="fsuara" style="margin:0">Jarvis menjawab dengan suara</label></div>
+  <label for="fpilih">Suara Jarvis</label>
+  <div class="row" style="margin-top:0"><select id="fpilih" style="flex:3;min-height:48px;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:0 10px;font:inherit"></select>
+  <button class="btn g" id="bdengar" style="flex:1">Dengar</button></div>
   <div id="err"></div>
   <div class="row"><button class="btn g" id="btutup">Tutup</button><button class="btn" id="bsimpan">Simpan dan sambungkan</button></div>
   <div class="row"><button class="btn g" id="bpasang" style="display:none">Pasang sebagai aplikasi</button></div>
-  <small class="v">Jarvis web versi 1.0</small>
+  <div id="diag" style="font-size:13px;color:var(--mu);margin-top:14px;line-height:1.6"></div>
+  <small class="v">Jarvis web versi 1.2</small>
 </div></div>
 
 <script>
 'use strict';
-var VERSI='1.0';
+var VERSI='1.2';
 var SIGAP='https://script.google.com/macros/s/AKfycbziGjjLwdvSXM4U7NI6iQ6Kx9vbvgJU74fIaYAP75UEMWTxReuz-xBDhcPmj1TIvWie/exec';
 var TAUTAN={
   'sigap':SIGAP,'youtube':'https://www.youtube.com','gmail':'https://mail.google.com','email':'https://mail.google.com',
@@ -115,7 +119,8 @@ var BANTUAN='Saya bisa membuka SIGAP, YouTube, Gmail, Drive, WhatsApp, dan pinta
 /* ---------- penyimpanan di perangkat ---------- */
 function ambil(k,d){try{var v=localStorage.getItem('jarvis_'+k);return v===null?d:v}catch(e){return d}}
 function simpan(k,v){try{localStorage.setItem('jarvis_'+k,v)}catch(e){}}
-var cfg={alamat:ambil('alamat',''),sandi:ambil('sandi',''),nama:ambil('nama',''),suara:ambil('suara','1')==='1',pintas:ambil('pintas','')};
+var cfg={alamat:ambil('alamat',''),sandi:ambil('sandi',''),nama:ambil('nama',''),suara:ambil('suara','1')==='1',pintas:ambil('pintas',''),
+  pilihSuara:ambil('pilih_suara','')};
 var panggilan=ambil('panggilan','Blue');
 var riwayat=[];
 
@@ -127,11 +132,29 @@ function gelembung(teks,jenis,tautan){
     a.rel='noopener';a.textContent=t.label||'Buka';if(i===0)d.appendChild(document.createElement('br'));else a.style.marginLeft='8px';
     d.appendChild(a)});
   $('log').appendChild(d);$('log').scrollTop=$('log').scrollHeight;return d}
-function ucap(teks){
-  if(!cfg.suara||!('speechSynthesis' in window))return;
-  try{speechSynthesis.cancel();var u=new SpeechSynthesisUtterance(teks);u.lang='id-ID';
-    var s=speechSynthesis.getVoices().filter(function(v){return /^id/i.test(v.lang)})[0];if(s)u.voice=s;
-    u.rate=1.05;speechSynthesis.speak(u)}catch(e){}}
+function daftarSuara(){
+  try{return speechSynthesis.getVoices().filter(function(v){return /^(id|in)([-_]|$)/i.test(v.lang)})}catch(e){return []}}
+function suaraTerpilih(){
+  var d=daftarSuara();if(!d.length)return null;
+  var dipilih=d.filter(function(v){return v.name===cfg.pilihSuara})[0];if(dipilih)return dipilih;
+  /* utamakan suara wanita alami seperti di laptop (Gadis), lalu suara "Natural/Online" */
+  return d.filter(function(v){return /gadis/i.test(v.name)})[0]||d.filter(function(v){return /natural|online|neural/i.test(v.name)})[0]
+      ||d.filter(function(v){return /female|wanita|perempuan/i.test(v.name)})[0]||d[0]}
+function ucap(teks,paksa){
+  if((!cfg.suara&&!paksa)||!('speechSynthesis' in window))return;
+  try{speechSynthesis.cancel();
+    /* kalimat demi kalimat: lebih cepat mulai bicara dan tidak terpotong pada teks panjang */
+    var potong=String(teks).replace(/\n+/g,'. ').split(/(?<=[.!?])\s+/).filter(function(x){return x.trim()}),s=suaraTerpilih();
+    var mulai=false;
+    potong.forEach(function(k,i){var u=new SpeechSynthesisUtterance(k);u.lang=s?s.lang:'id-ID';if(s)u.voice=s;u.rate=1.05;
+      if(i===0)u.onstart=function(){mulai=true;simpan('tts_ok','1')};speechSynthesis.speak(u)});
+    setTimeout(function(){if(!mulai&&ambil('tts_ok','')!=='1'&&!window.__ttsDiberitahu){window.__ttsDiberitahu=true;
+      gelembung('Perangkat ini tidak mengeluarkan suara untuk Jarvis. Lihat bagian Pemeriksaan di Pengaturan.','s')}},3000)}catch(e){}}
+function isiPilihanSuara(){
+  var el=$('fpilih');if(!el)return;var d=daftarSuara(),t=suaraTerpilih();el.innerHTML='';
+  if(!d.length){var o=document.createElement('option');o.textContent='Tidak ada suara bahasa Indonesia di perangkat ini';o.value='';el.appendChild(o);return}
+  d.forEach(function(v){var o=document.createElement('option');o.value=v.name;o.textContent=v.name+(v.localService?'':' (perlu internet)');
+    if(t&&v.name===t.name)o.selected=true;el.appendChild(o)})}
 function jawab(teks,tautan){gelembung(teks,'j',tautan);ucap(teks)}
 function status(menyala,teks){$('dot').className='dot'+(menyala?' on':'');$('stt').textContent=teks}
 
@@ -174,13 +197,19 @@ function bersih(teks){
   a=a.replace(/^(bukain|bukak|open|membuka|bukakan|bukalah)\b/i,'buka').replace(/^(carikan|search|googling|mencari)\b/i,'cari')
      .replace(/^cari\s+saya\s+/i,'cari ').replace(/^(bacain|membacakan|baca)\b/i,'bacakan');
   return a}
+var KHUSUS_LAPTOP=/^(volume|suara(nya)?\s+(naik|turun|besar|kecil)|kunci\s+layar|mulai\s+kerja|atur\s+mulai|matikan|mulai\s+ulang|restart|hapus|buang|istirahat|rekam|dengarkan\s+rapat|buat\s+resume)\b/i;
+function perintahLaptop(teks){
+  var b=bersih(teks);
+  if(KHUSUS_LAPTOP.test(b))return true;
+  var p=pahami(b);
+  return p.aksi!=='tanya'&&p.aksi!=='kosong'&&p.aksi!=='laptop'&&p.aksi!=='status'&&p.aksi!=='bantuan'}
 function pahami(teks){
   var utuh=String(teks||'').trim(), a=bersih(teks), p=a.toLowerCase(), m;
   if(!p)return {aksi:'kosong'};
   if(p==='bantuan'||/apa yang bisa|bisa apa/.test(p))return {aksi:'bantuan'};
   if(/^(status|cek|periksa)\s+laptop$/.test(p)||/^(apakah\s+)?laptop\s+(menyala|hidup|nyala|aktif)/.test(p))return {aksi:'status'};
   if((m=/^(?:di\s+)?laptop[\s,:]+(.+)$/i.exec(a)))return {aksi:'laptop',teks:m[1].trim()};
-  if((m=/^(.+?)\s+(?:di|pada|ke|lewat)\s+laptop$/i.exec(a)))return {aksi:'laptop',teks:m[1].trim()};
+  if((m=/^(.+?)\s+(?:di|pada|ke|lewat)\s+laptop$/i.exec(a))&&perintahLaptop(m[1]))return {aksi:'laptop',teks:m[1].trim()};
   if(/^bacakan\s+(isi\s+)?catatan(\s+(saya|terakhir|tadi|jarvis))*$/.test(p)||/^(lihat|apa saja)\s+catatan/.test(p))return {aksi:'baca_catatan'};
   if((m=/^(?:catat(?:kan|lah)?|catatan|ingat(?:kan)?|tulis(?:kan)?)\b[\s:,]*(.*)$/i.exec(a)))
     return {aksi:'catat',isi:m[1].replace(/^(bahwa|ini|dong|ya)\s+/i,'').trim()};
@@ -274,27 +303,43 @@ function proses(teks){
   jalankan(p).catch(function(e){jawab(pesanGalat(e))}).then(function(){sibuk=false})}
 
 /* ---------- mikrofon ---------- */
-var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, dengar=false;
-function petunjukMik(){gelembung('Mikrofon aplikasi tidak tersedia di perangkat ini. Ketuk kolom ketik, lalu pakai tombol mikrofon pada keyboard.','s');$('in').focus()}
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, dengar=false, jamMik=null, adaHasil=false;
+if(ambil('mik_gagal','0')==='2')SR=null;          /* sudah dua kali gagal: langsung pakai keyboard */
+function petunjukMik(){gelembung('Mikrofon aplikasi tidak bekerja di perangkat ini. Ketuk kolom ketik, lalu pakai tombol mikrofon pada keyboard.','s');$('in').focus()}
+function mikGagal(){var n=Math.min(2,parseInt(ambil('mik_gagal','0'),10)+1);simpan('mik_gagal',String(n));if(n>=2)SR=null;petunjukMik()}
 function mik(){
   if(!SR){petunjukMik();return}
   if(dengar){try{rec.stop()}catch(e){}return}
   try{speechSynthesis.cancel()}catch(e){}
   rec=new SR();rec.lang='id-ID';rec.interimResults=false;rec.maxAlternatives=1;
-  rec.onstart=function(){dengar=true;$('mic').className='on'};
-  rec.onend=function(){dengar=false;$('mic').className=''};
-  rec.onerror=function(e){dengar=false;$('mic').className='';
-    if(e.error==='not-allowed'||e.error==='service-not-allowed'||e.error==='language-not-supported'||e.error==='network'){SR=null;petunjukMik()}};
-  rec.onresult=function(e){var t=e.results[0][0].transcript;proses(t)};
+  adaHasil=false;
+  rec.onstart=function(){dengar=true;$('mic').className='on';
+    clearTimeout(jamMik);jamMik=setTimeout(function(){if(dengar&&!adaHasil){try{rec.abort()}catch(e){}dengar=false;$('mic').className='';mikGagal()}},9000)};
+  rec.onend=function(){clearTimeout(jamMik);var tadi=dengar;dengar=false;$('mic').className='';if(tadi&&!adaHasil)mikGagal()};
+  rec.onerror=function(e){clearTimeout(jamMik);dengar=false;$('mic').className='';
+    if(e.error==='no-speech'||e.error==='aborted')return;
+    mikGagal()};
+  rec.onresult=function(e){adaHasil=true;simpan('mik_gagal','0');clearTimeout(jamMik);var t=e.results[0][0].transcript;proses(t)};
   try{rec.start()}catch(e){petunjukMik()}}
 
 /* ---------- pengaturan ---------- */
+function pemeriksaan(){
+  var semua=[];try{semua=speechSynthesis.getVoices()}catch(e){}
+  var id=daftarSuara();
+  var bawaanMik=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
+  $('diag').innerHTML='<b>Pemeriksaan perangkat</b><br>'+
+    'Pengenal suara browser: '+(bawaanMik?(SR?'ada':'ada, tetapi gagal dipakai'):'tidak ada')+'<br>'+
+    'Suara pembaca: '+semua.length+' terpasang, '+id.length+' berbahasa Indonesia<br>'+
+    'Suara pernah terdengar: '+(ambil('tts_ok','')==='1'?'ya':'belum')+'<br>'+
+    '<button class="btn g" id="bulangmik" style="margin-top:8px;min-height:40px">Coba lagi mikrofon aplikasi</button>';
+  $('bulangmik').onclick=function(){simpan('mik_gagal','0');SR=window.SpeechRecognition||window.webkitSpeechRecognition;pemeriksaan()}}
 function bukaAtur(){
   $('falamat').value=cfg.alamat;$('fsandi').value=cfg.sandi;$('fnama').value=cfg.nama;$('fpintas').value=cfg.pintas;
-  $('fsuara').checked=cfg.suara;$('err').textContent='';$('sheet').className='sheet show'}
+  $('fsuara').checked=cfg.suara;isiPilihanSuara();pemeriksaan();$('err').textContent='';$('sheet').className='sheet show'}
 function simpanAtur(){
   cfg.alamat=$('falamat').value.trim();cfg.sandi=$('fsandi').value;cfg.nama=$('fnama').value.trim();
-  cfg.pintas=$('fpintas').value;cfg.suara=$('fsuara').checked;
+  cfg.pintas=$('fpintas').value;cfg.suara=$('fsuara').checked;cfg.pilihSuara=$('fpilih').value||cfg.pilihSuara;
+  simpan('pilih_suara',cfg.pilihSuara);
   simpan('alamat',cfg.alamat);simpan('sandi',cfg.sandi);simpan('nama',cfg.nama);simpan('pintas',cfg.pintas);simpan('suara',cfg.suara?'1':'0');
   if(!cfg.alamat||!cfg.sandi){$('sheet').className='sheet';status(false,'belum tersambung');return}
   if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w\-]+\/exec$/.test(cfg.alamat)){$('err').textContent='Alamat harus alamat Apps Script yang berakhiran /exec.';return}
@@ -311,7 +356,8 @@ if(typeof document!=='undefined'&&document.getElementById){
   var DP=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();DP=e;$('bpasang').style.display=''});
   $('bpasang').onclick=function(){if(DP){DP.prompt();DP=null;$('bpasang').style.display='none'}};
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(function(){});
-  if('speechSynthesis' in window)try{speechSynthesis.getVoices()}catch(e){}
+  if('speechSynthesis' in window)try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=isiPilihanSuara}catch(e){}
+  $('bdengar').onclick=function(){var lama=cfg.pilihSuara;cfg.pilihSuara=$('fpilih').value;ucap('Halo '+panggilan+'. Saya Jarvis, siap membantu.',true);cfg.pilihSuara=lama};
   gelembung('Jarvis siap. Ketuk mikrofon atau ketik perintah. Tambahkan kata "di laptop" untuk menyuruh laptop.','s');
   if(cfg.alamat&&cfg.sandi)periksa().catch(function(){});else bukaAtur();
   setInterval(function(){if(cfg.alamat&&cfg.sandi&&document.visibilityState==='visible')periksa().catch(function(){})},60000);
